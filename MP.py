@@ -82,5 +82,33 @@ buttonT.place(x=780, y=170)
 buttonU = tk.Button(root, text="U", command=lambda: print("Button clicked"))
 buttonU.place(x=10, y=420)
 
+
+algo_frame = tk.LabelFrame(root, text="Choose Algorithm", padx=10, pady=10, bg="lightgray")
+algo_frame.pack(padx=10, pady=10, anchor="nw")
+
+algorithm_var = tk.StringVar(value="BFS")
+
+bfs_radio = tk.Radiobutton(
+    algo_frame,
+    text="BFS (Breadth-First Search)",
+    variable=algorithm_var,
+    value="BFS",
+    bg="lightgray"
+)
+bfs_radio.pack(anchor=tk.W)
+
+astar_radio = tk.Radiobutton(
+    algo_frame,
+    text="A* (Heuristic Search)",
+    variable=algorithm_var,
+    value="A*",
+    bg="lightgray"
+)
+astar_radio.pack(anchor=tk.W)
+
+buttonU = tk.Button(root, text="Find Path", command=lambda: print("Button clicked"))
+buttonU.place(x=210, y=12)
+
+
 # Start the GUI loop
 root.mainloop()
