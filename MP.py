@@ -111,7 +111,7 @@ buttonU.place(x=10, y=420)
 buttonU = tk.Button(root, text="V", command=lambda: toggle_selection("V"))
 buttonU.place(x=160, y=500)
 
-# Coordinates for each node (used for cost calculation)
+# Coordinates for each node (to draw path)
 coordinates = {
     "A": (773, 350), "B": (745, 350), "C": (665, 400), "D": (413, 495),
     "E": (365, 340), "F": (326, 340), "G": (241, 336), "H": (285, 520),
