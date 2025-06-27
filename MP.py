@@ -172,6 +172,125 @@ def bfs(start, end):
 
     return None, float('inf')
 
+# Database of Restaurants as Nodes
+restaurant_data = {
+    "A": {"name": "University Mall", "rating": 3.9, "reviews": 293},
+    "B": {"name": "McDonalds", "rating": 4.2, "reviews": 1041},
+    "C": {"name": "Pericos", "rating": 4.0, "reviews": 2},
+    "D": {"name": "Bloemen Hall", "rating": 4.5, "reviews": 2},
+    "E": {"name": "W.H. Taft Residence", "rating": 4.2, "reviews": 76},
+    "F": {"name": "EGI Taft", "rating": 4.7, "reviews": 88},
+    "G": {"name": "Castro Street", "rating": 4.5, "reviews": 11},
+    "H": {"name": "Agno Food Court", "rating": 4.3, "reviews": 34},
+    "I": {"name": "One Archers", "rating": 3.9, "reviews": 31},
+    "J": {"name": "La Casita Br. Andrew Gonzales Hall", "rating": 4.2, "reviews": 105},
+    "K": {"name": "Green Mall", "rating": 4.1, "reviews": 30},
+    "L": {"name": "Green Court", "rating": 4.4, "reviews": 176},
+    "M": {"name": "Sherwood", "rating": 4.1, "reviews": 178},
+    "N": {"name": "Jollibee", "rating": 3.7, "reviews": 230},
+    "O": {"name": "Dagonoy St.", "rating": 4.8, "reviews": 78},
+    "P": {"name": "Burgundy", "rating": 4.2, "reviews": 607},
+    "Q": {"name": "Estrada St.", "rating": 3.5, "reviews": 181},
+    "R": {"name": "D' Student's Place", "rating": 4.5, "reviews": 265},
+    "S": {"name": "Leon Guinto St.", "rating": 4.6, "reviews": 310},
+    "T": {"name": "P. Ocampo St.", "rating": 4.1, "reviews": 1079},
+    "U": {"name": "Fidel A, Reyes St.", "rating": 4.2, "reviews": 105},
+    "V": {"name": "La Casita Enrique Razon Hall", "rating": 4.2, "reviews": 105},
+    "X": {"name": "Pedestrian Crossing", "rating": 5.0, "reviews": 9999},
+    "Y": {"name": "Pedestrian Crossing", "rating": 5.0, "reviews": 9999},
+    "Z": {"name": "Pedestrian Crossing", "rating": 5.0, "reviews": 9999}
+}
+
+def calculate_review_score(node):
+    """Calculate a score based on restaurant reviews and ratings"""
+    data = restaurant_data.get(node, {"rating": 3.0, "reviews": 100})
+    rating = data["rating"]
+    reviews = data["reviews"]
+    
+    # Normalize rating (0-5 scale) and review count
+    rating_score = rating / 5.0  # Convert to 0-1 scale
+    review_weight = min(reviews / 1000.0, 1.0)  # Cap at 1000 reviews for weight
+    
+    # Combined score: higher rating + more reviews = better score
+    combined_score = (rating_score * 0.7) + (review_weight * 0.3)
+    return combined_score
+
+# Heuristic function for A* (combines distance and review quality)
+def heuristic(node1, node2):
+    """Calculate heuristic based on Euclidean distance and destination quality"""
+    # Calculate Euclidean distance
+    x1, y1 = coordinates[node1]
+    x2, y2 = coordinates[node2]
+    distance = math.sqrt((x2 - x1)**2 + (y2 - y1)**2)
+    
+    # Get review-based quality score for destination
+    destination_quality = calculate_review_score(node2)
+    
+    # Adjust heuristic: better restaurants have lower heuristic values
+    # This encourages the algorithm to prefer paths to highly-rated places
+    quality_modifier = 1.0 - (destination_quality * 0.3)  # Reduce heuristic by up to 30%
+    
+    return distance * quality_modifier
+
+# Alternative: Pure review-based heuristic
+def review_heuristic(node1, node2):
+    """Pure review-based heuristic - prefers highly rated destinations"""
+    destination_score = calculate_review_score(node2)
+    # Lower score for better restaurants (A* minimizes heuristic)
+    return 100 * (1.0 - destination_score)
+
+# A* Algorithm Function with heuristic choice
+def astar(start, end, heuristic_type="review"):
+    import heapq
+    
+    # Priority queue: (f_score, g_score, current_node, path)
+    open_set = [(0, 0, start, [start])]
+    closed_set = set()
+    g_scores = {start: 0}
+    
+    while open_set:
+        f_score, g_score, current, path = heapq.heappop(open_set)
+        
+        if current == end:
+            return path, g_score
+        
+        if current in closed_set:
+            continue
+            
+        closed_set.add(current)
+        
+        for neighbor in graph.get(current, {}):
+            if neighbor in closed_set:
+                continue
+                
+            tentative_g_score = g_score + graph[current][neighbor]
+            
+            if neighbor not in g_scores or tentative_g_score < g_scores[neighbor]:
+                g_scores[neighbor] = tentative_g_score
+                
+                # Choose heuristic type
+                if heuristic_type == "review":
+                    h_score = review_heuristic(neighbor, end)
+                elif heuristic_type == "combined":
+                    h_score = heuristic(neighbor, end)
+                else:  # distance
+                    x1, y1 = coordinates[neighbor]
+                    x2, y2 = coordinates[end]
+                    h_score = math.sqrt((x2 - x1)**2 + (y2 - y1)**2)
+                
+                f_score = tentative_g_score + h_score
+                new_path = path + [neighbor]
+                heapq.heappush(open_set, (f_score, tentative_g_score, neighbor, new_path))
+    
+    return None, float('inf')
+
+# Show restaurant info
+def show_restaurant_info(node):
+    if node in restaurant_data:
+        data = restaurant_data[node]
+        info = f"Restaurant: {data['name']}\nRating: {data['rating']}/5.0\nReviews: {data['reviews']}"
+        messagebox.showinfo(f"Restaurant Info - {node}", info)
+
 # Show Path of BFS / A*
 def show_path():
     # Clear previous path
@@ -187,7 +306,13 @@ def show_path():
         path, cost = bfs(start_point, end_point)
         if path:
             path_str = "-".join(path)
-            result = f"Path from {start_point} to {end_point}:\n\n {path_str}\n\nCost: {cost}"
+            # Add restaurant info for destination
+            dest_info = ""
+            if end_point in restaurant_data:
+                data = restaurant_data[end_point]
+                dest_info = f"\n\nDestination: {data['name']}\nRating: {data['rating']}/5 ({data['reviews']} reviews)"
+            
+            result = f"Path from {start_point} to {end_point}:\n\n{path_str}\n\nTravel Cost: {cost}{dest_info}"
             # Draw path
             for i in range(len(path) - 1):
                 x1, y1 = coordinates[path[i]]
@@ -198,8 +323,34 @@ def show_path():
 
         result_window = tk.Toplevel(root)
         result_window.title("BFS Path Result")
-        result_window.geometry("400x150")
-        result_label = tk.Label(result_window, text=result, padx=10, pady=10, font=("Arial", 12))
+        result_window.geometry("450x200")
+        result_label = tk.Label(result_window, text=result, padx=10, pady=10, font=("Arial", 11))
+        result_label.pack()
+    elif algo == "A*":
+        heuristic_type = heuristic_var.get()
+        path, cost = astar(start_point, end_point, heuristic_type)
+        if path:
+            path_str = "-".join(path)
+            # Add restaurant info for destination
+            dest_info = ""
+            if end_point in restaurant_data:
+                data = restaurant_data[end_point]
+                dest_info = f"\n\nDestination: {data['name']}\nRating: {data['rating']}/5 ({data['reviews']} reviews)"
+            
+            heuristic_info = f"\nHeuristic: {heuristic_type.title()}"
+            result = f"Path from {start_point} to {end_point}:\n\n{path_str}\n\nTravel Cost: {cost}{heuristic_info}{dest_info}"
+            # Draw path
+            for i in range(len(path) - 1):
+                x1, y1 = coordinates[path[i]]
+                x2, y2 = coordinates[path[i+1]]
+                canvas.create_line(x1, y1, x2, y2, fill="red", width=5, tags="path")
+        else:
+            result = "No path found."
+
+        result_window = tk.Toplevel(root)
+        result_window.title("A* Path Result")
+        result_window.geometry("450x220")
+        result_label = tk.Label(result_window, text=result, padx=10, pady=10, font=("Arial", 11))
         result_label.pack()
 
 
@@ -226,11 +377,47 @@ astar_radio = tk.Radiobutton(
 )
 astar_radio.pack(anchor=tk.W)
 
+# Heuristic selection frame (only visible when A* is selected)
+heuristic_frame = tk.LabelFrame(root, text="A* Heuristic Type", padx=5, pady=5, bg="lightblue")
+heuristic_frame.place(x=600, y=10)
+
+heuristic_var = tk.StringVar(value="distance")
+
+distance_radio = tk.Radiobutton(
+    heuristic_frame,
+    text="Distance Only",
+    variable=heuristic_var,
+    value="distance",
+    bg="lightblue"
+)
+distance_radio.pack(anchor=tk.W)
+
+review_radio = tk.Radiobutton(
+    heuristic_frame,
+    text="Review-Based",
+    variable=heuristic_var,
+    value="review",
+    bg="lightblue"
+)
+review_radio.pack(anchor=tk.W)
+
+combined_radio = tk.Radiobutton(
+    heuristic_frame,
+    text="Distance + Reviews",
+    variable=heuristic_var,
+    value="combined",
+    bg="lightblue"
+)
+combined_radio.pack(anchor=tk.W)
+
 buttonFind = tk.Button(root, text="Find Path", command=show_path)
 buttonFind.place(x=210, y=12)
 
 buttonClear = tk.Button(root, text="Clear Path", command=lambda: toggle_clear())
 buttonClear.place(x=280, y=12)
+
+buttonInfo = tk.Button(root, text="Restaurant Info", command=lambda: show_restaurant_info(end_point) if end_point else messagebox.showwarning("No Selection", "Please select a destination first"))
+buttonInfo.place(x=350, y=12)
 
 def toggle_clear():
     # Clear previous path
