@@ -1,5 +1,7 @@
 import tkinter as tk
+import math
 from PIL import Image, ImageTk
+from tkinter import messagebox
 
 # Load your image (replace 'your_image.jpg' with the actual file path)
 image_path = "bg.png"
@@ -17,6 +19,10 @@ bg_image = ImageTk.PhotoImage(img)
 # Create a label to display the background image
 background_label = tk.Label(root, image=bg_image)
 background_label.place(x=0, y=0, relwidth=1, relheight=1)
+
+canvas = tk.Canvas(root, width=800, height=600)
+canvas.pack()
+canvas.create_image(0, 0, anchor=tk.NW, image=bg_image)
 
 start_point = None
 end_point = None
@@ -102,9 +108,103 @@ buttonT.place(x=780, y=170)
 buttonU = tk.Button(root, text="U", command=lambda: toggle_selection("U"))
 buttonU.place(x=10, y=420)
 
+buttonU = tk.Button(root, text="V", command=lambda: toggle_selection("V"))
+buttonU.place(x=160, y=500)
+
+# Coordinates for each node (used for cost calculation)
+coordinates = {
+    "A": (773, 350), "B": (745, 350), "C": (665, 400), "D": (413, 495),
+    "E": (365, 340), "F": (326, 340), "G": (241, 336), "H": (285, 520),
+    "I": (170, 345), "J": (112, 375), "K": (57, 355), "L": (213, 485),
+    "M": (67, 189), "N": (137, 189), "O": (343, 191), "P": (484, 201),
+    "Q": (524, 201), "R": (631, 211), "S": (481, 150), "T": (780, 170),
+    "U": (10, 420), "V": (160, 500), 
+    "X": (190, 270), "Y": (400, 270), "Z": (740, 270)
+}
+
+# Adjacency list for each node with cost
+graph = {
+    "A": {"B": 1, "Z": 4},
+    "B": {"A": 1, "C": 4, "Z": 3}, 
+    "C": {"B": 4, "D": 12, "Y": 12}, 
+    "D": {"C": 12, "E": 9, "H": 6},
+    "E": {"D": 9, "F": 1, "Y": 4}, 
+    "F": {"E": 1, "G": 3}, 
+    "G": {"F": 3, "I": 4, "L": 7, "X": 4}, 
+    "H": {"D": 6, "L": 4},
+    "I": {"G": 4, "J": 2, "X": 4}, 
+    "J": {"I": 2, "K": 2, "L": 6, "U": 5, "V": 7}, 
+    "K": {"J": 2, "U": 4, "X": 7}, 
+    "L": {"G": 7, "H": 4, "J": 6, "V": 3},
+    "M": {"N": 2, "X": 6}, 
+    "N": {"M": 2, "O": 9, "X": 5}, 
+    "O": {"N": 9, "X": 8, "Y": 5}, 
+    "P": {"S": 1, "Q": 1, "Y": 5},
+    "Q": {"P": 1, "R": 5, "S": 2}, 
+    "R": {"Q": 5, "T": 7, "Z": 6}, 
+    "S": {"P": 1, "Q": 2}, 
+    "T": {"R": 7, "Z": 5},
+    "U": {"K": 4, "J": 5, "V": 9}, 
+    "V": {"J": 7, "L": 3, "U": 9}, 
+    "X": {"G": 4, "I": 4, "K": 7, "M": 6, "N": 5, "O": 8, "Y": 10}, 
+    "Y": {"C": 12, "E": 4, "O": 5, "P": 5, "X": 10, "Z": 15}, 
+    "Z": {"A": 4, "B": 3, "R": 6, "T": 5, "Y": 15}
+}
+
+# BFS Algorithm Function
+def bfs(start, end):
+    from collections import deque
+
+    visited = set()
+    queue = deque([(start, [start], 0)])
+
+    while queue:
+        current, path, cost = queue.popleft()
+
+        if current == end:
+            return path, cost
+
+        visited.add(current)
+        for neighbor in graph.get(current, {}):
+            if neighbor not in visited:
+                total_cost = cost + graph[current][neighbor]
+                queue.append((neighbor, path + [neighbor], total_cost))
+
+    return None, float('inf')
+
+# Show Path of BFS / A*
+def show_path():
+    # Clear previous path
+    for item in canvas.find_all():
+        if "path" in canvas.gettags(item):
+            canvas.delete(item)
+    if not start_point or not end_point:
+        messagebox.showwarning("Invalid Input", "Please select both start and destination nodes.")
+        return
+
+    algo = algorithm_var.get()
+    if algo == "BFS":
+        path, cost = bfs(start_point, end_point)
+        if path:
+            path_str = "-".join(path)
+            result = f"Path from {start_point} to {end_point}:\n\n {path_str}\n\nCost: {cost}"
+            # Draw path
+            for i in range(len(path) - 1):
+                x1, y1 = coordinates[path[i]]
+                x2, y2 = coordinates[path[i+1]]
+                canvas.create_line(x1, y1, x2, y2, fill="red", width=5, tags="path")
+        else:
+            result = "No path found."
+
+        result_window = tk.Toplevel(root)
+        result_window.title("BFS Path Result")
+        result_window.geometry("400x150")
+        result_label = tk.Label(result_window, text=result, padx=10, pady=10, font=("Arial", 12))
+        result_label.pack()
+
 
 algo_frame = tk.LabelFrame(root, text="Choose Algorithm", padx=10, pady=10, bg="lightgray")
-algo_frame.pack(padx=10, pady=10, anchor="nw")
+algo_frame.place(x=10, y=10)
 
 algorithm_var = tk.StringVar(value="BFS")
 
@@ -126,13 +226,17 @@ astar_radio = tk.Radiobutton(
 )
 astar_radio.pack(anchor=tk.W)
 
-buttonFind = tk.Button(root, text="Find Path", command=lambda: print("Button clicked"))
+buttonFind = tk.Button(root, text="Find Path", command=show_path)
 buttonFind.place(x=210, y=12)
 
 buttonClear = tk.Button(root, text="Clear Path", command=lambda: toggle_clear())
 buttonClear.place(x=280, y=12)
 
 def toggle_clear():
+    # Clear previous path
+    for item in canvas.find_all():
+        if "path" in canvas.gettags(item):
+            canvas.delete(item)
     global start_point, end_point
     start_point = None
     end_point = None
