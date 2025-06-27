@@ -3,7 +3,6 @@ import math
 from PIL import Image, ImageTk
 from tkinter import messagebox, simpledialog
 
-# Load your image (replace 'your_image.jpg' with the actual file path)
 image_path = "bg.png"
 img = Image.open(image_path)
 
@@ -13,10 +12,9 @@ root.title("DLSU Food Map")
 root.geometry("800x600")
 root.resizable(False, False)
 # Resize the image to match the window size
-img = img.resize((800, 600))  # You can adjust the size as needed
+img = img.resize((800, 600))  
 bg_image = ImageTk.PhotoImage(img)
 
-# Create a label to display the background image
 background_label = tk.Label(root, image=bg_image)
 background_label.place(x=0, y=0, relwidth=1, relheight=1)
 
@@ -26,7 +24,7 @@ canvas.create_image(0, 0, anchor=tk.NW, image=bg_image)
 
 start_point = None
 end_point = None
-selection_stage = ["start"]  # Mutable wrapper so it can update in toggle
+selection_stage = ["start"]
 
 # Track default nodes that cannot be removed
 DEFAULT_NODES = set(["A", "B", "C", "D", "E", "F", "G", "H", "I", "J", "K", "L", "M", "N", "O", "P", "Q", "R", "S", "T", "U", "V", "X", "Y", "Z"])
