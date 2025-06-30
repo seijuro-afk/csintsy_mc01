@@ -1,9 +1,21 @@
 import tkinter as tk
 import math
+import os
+import sys
 from PIL import Image, ImageTk
 from tkinter import messagebox, simpledialog
 
-image_path = "bg.png"
+def resource_path(relative_path):
+    """Get absolute path to resource, works for dev and for PyInstaller"""
+    try:
+        # PyInstaller creates a temp folder and stores path in _MEIPASS
+        base_path = sys._MEIPASS
+    except Exception:
+        base_path = os.path.abspath(".")
+    
+    return os.path.join(base_path, relative_path)
+
+image_path = resource_path("bg.png")
 img = Image.open(image_path)
 
 # Create the main window
